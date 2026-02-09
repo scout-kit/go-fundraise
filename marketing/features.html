@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features - Go Fundraise</title>
+    <link rel="icon" type="image/png" href="app-logo.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="features.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="logo">
+                <img src="app-logo.png" alt="Go Fundraise" class="logo-img">
+                Go Fundraise
+            </a>
+            <div class="nav-links">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#how-it-works">How It Works</a>
+                <a href="features.html" class="active">Learn More</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>Features That Make<br>Pickup Day Easy</h1>
+            <p>Everything you need to manage your fundraiser pickup, from import to celebration.</p>
+        </div>
+    </section>
+
+    <!-- Feature: Import -->
+    <section class="feature-detail">
+        <div class="container feature-detail-container">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Import</div>
+                <h2>One-Click PDF Import</h2>
+                <p>
+                    No more manual data entry. Simply upload the PDF from your fundraiser company
+                    and Go Fundraise does the rest. We automatically extract customer names,
+                    contact info, orders, and products.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>JD Sweid Support</strong>
+                        <span>Direct import from JD Sweid fundraiser PDFs</span>
+                    </li>
+                    <li>
+                        <strong>Little Caesars Support</strong>
+                        <span>Works with Little Caesars Pizza Kit fundraiser orders</span>
+                    </li>
+                    <li>
+                        <strong>CSV Fallback</strong>
+                        <span>Import from any spreadsheet with our CSV template</span>
+                    </li>
+                    <li>
+                        <strong>Smart Parsing</strong>
+                        <span>Handles messy PDFs and extracts the data you need</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card import-visual">
+                    <div class="import-options">
+                        <div class="import-option">
+                            <span class="import-icon">📄</span>
+                            <span class="import-name">JD Sweid</span>
+                            <span class="import-type">PDF</span>
+                        </div>
+                        <div class="import-option">
+                            <span class="import-icon">🍕</span>
+                            <span class="import-name">Little Caesars</span>
+                            <span class="import-type">PDF</span>
+                        </div>
+                        <div class="import-option">
+                            <span class="import-icon">📊</span>
+                            <span class="import-name">Custom CSV</span>
+                            <span class="import-type">Spreadsheet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Smart Consolidation -->
+    <section class="feature-detail alt">
+        <div class="container feature-detail-container reverse">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Organization</div>
+                <h2>Smart Customer Consolidation</h2>
+                <p>
+                    Families often place multiple orders. Go Fundraise automatically
+                    detects and combines duplicate customers so you see all their orders
+                    in one place—no more confusion.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>Email Matching</strong>
+                        <span>Combines orders with the same email address</span>
+                    </li>
+                    <li>
+                        <strong>Phone Matching</strong>
+                        <span>Recognizes phone numbers even with different formats</span>
+                    </li>
+                    <li>
+                        <strong>Name Matching</strong>
+                        <span>Catches duplicates like "John Smith" and "Smith, John"</span>
+                    </li>
+                    <li>
+                        <strong>Manual Merge</strong>
+                        <span>Easily combine customers that weren't auto-detected</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card merge-visual">
+                    <div class="merge-before">
+                        <div class="merge-label">Before</div>
+                        <div class="merge-item">John Smith</div>
+                        <div class="merge-item">Smith, John</div>
+                        <div class="merge-item">J. Smith</div>
+                    </div>
+                    <div class="merge-arrow">→</div>
+                    <div class="merge-after">
+                        <div class="merge-label">After</div>
+                        <div class="merge-item combined">
+                            John Smith
+                            <span class="merge-count">3 orders</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Search & Pickup -->
+    <section class="feature-detail">
+        <div class="container feature-detail-container">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Pickup Day</div>
+                <h2>Lightning-Fast Search</h2>
+                <p>
+                    When customers arrive, find them instantly. Search by name, phone number,
+                    or email. View their complete order details and mark as picked up with one tap.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>Instant Results</strong>
+                        <span>Find any customer as you type</span>
+                    </li>
+                    <li>
+                        <strong>Order Details</strong>
+                        <span>See exactly what products and quantities they ordered</span>
+                    </li>
+                    <li>
+                        <strong>One-Tap Pickup</strong>
+                        <span>Mark as picked up with a single tap</span>
+                    </li>
+                    <li>
+                        <strong>Volunteer Tracking</strong>
+                        <span>Record initials for accountability</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card search-visual">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <span class="search-text">smith</span>
+                    </div>
+                    <div class="search-results">
+                        <div class="search-result">
+                            <span class="result-name">Smith, Sarah</span>
+                            <span class="result-info">2 boxes</span>
+                        </div>
+                        <div class="search-result">
+                            <span class="result-name">John Smith</span>
+                            <span class="result-info">4 boxes</span>
+                        </div>
+                        <div class="search-result">
+                            <span class="result-name">Smithson Family</span>
+                            <span class="result-info">6 boxes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Progress Tracking -->
+    <section class="feature-detail alt">
+        <div class="container feature-detail-container reverse">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Tracking</div>
+                <h2>Real-Time Progress</h2>
+                <p>
+                    Always know exactly where you stand. See how many customers have picked up,
+                    how many are remaining, and watch the progress bar fill up as you go.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>Live Dashboard</strong>
+                        <span>Picked up vs. remaining at a glance</span>
+                    </li>
+                    <li>
+                        <strong>Progress Bar</strong>
+                        <span>Visual indicator of completion percentage</span>
+                    </li>
+                    <li>
+                        <strong>Quick Filters</strong>
+                        <span>View only remaining customers when needed</span>
+                    </li>
+                    <li>
+                        <strong>Export Log</strong>
+                        <span>Generate a complete pickup report</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card progress-visual">
+                    <div class="progress-stats">
+                        <div class="progress-stat">
+                            <span class="progress-value done">18</span>
+                            <span class="progress-label">Picked Up</span>
+                        </div>
+                        <div class="progress-stat">
+                            <span class="progress-value remaining">6</span>
+                            <span class="progress-label">Remaining</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: 75%"></div>
+                    </div>
+                    <div class="progress-percent">75% Complete</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Items Sheet -->
+    <section class="feature-detail">
+        <div class="container feature-detail-container">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Inventory</div>
+                <h2>Items Checklist</h2>
+                <p>
+                    Know exactly what products you have and need to distribute. The items sheet
+                    shows all products with quantities, and you can check them off as you verify
+                    your inventory.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>Product Summary</strong>
+                        <span>Total quantities for each product</span>
+                    </li>
+                    <li>
+                        <strong>Verification Checklist</strong>
+                        <span>Check off items as you verify inventory</span>
+                    </li>
+                    <li>
+                        <strong>Reference Photos</strong>
+                        <span>Attach photos to help identify products</span>
+                    </li>
+                    <li>
+                        <strong>Clear All Option</strong>
+                        <span>Reset for a fresh start if needed</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card items-visual">
+                    <div class="items-list">
+                        <div class="item-row checked">
+                            <span class="item-check">✓</span>
+                            <span class="item-name">Pepperoni Pizza Kit</span>
+                            <span class="item-qty">x24</span>
+                        </div>
+                        <div class="item-row checked">
+                            <span class="item-check">✓</span>
+                            <span class="item-name">Cheese Pizza Kit</span>
+                            <span class="item-qty">x18</span>
+                        </div>
+                        <div class="item-row">
+                            <span class="item-check empty"></span>
+                            <span class="item-name">Cookie Dough</span>
+                            <span class="item-qty">x12</span>
+                        </div>
+                        <div class="item-row">
+                            <span class="item-check empty"></span>
+                            <span class="item-name">Crazy Bread Kit</span>
+                            <span class="item-qty">x8</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Celebration -->
+    <section class="feature-detail celebration-section">
+        <div class="container">
+            <div class="celebration-content">
+                <div class="confetti-left">🎊</div>
+                <div class="celebration-text">
+                    <h2>Celebrate When You're Done!</h2>
+                    <p>
+                        When the last customer picks up their order, Go Fundraise celebrates
+                        with you! Confetti, congratulations, and the satisfaction of a job well done.
+                    </p>
+                    <div class="celebration-emoji">🎉</div>
+                </div>
+                <div class="confetti-right">🎊</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature: Backup & Restore -->
+    <section class="feature-detail alt">
+        <div class="container feature-detail-container reverse">
+            <div class="feature-detail-content">
+                <div class="feature-badge">Data Safety</div>
+                <h2>Backup & Restore</h2>
+                <p>
+                    Never worry about losing your fundraiser data. Export a complete backup that includes
+                    all customers, orders, pickup status, and more. Restore on any device—perfect for
+                    sharing between volunteers or moving to a new phone.
+                </p>
+                <ul class="feature-list">
+                    <li>
+                        <strong>Complete Backup</strong>
+                        <span>Saves all customers, orders, items, and pickup progress</span>
+                    </li>
+                    <li>
+                        <strong>Compressed Format</strong>
+                        <span>Small file size for easy sharing via email or messaging</span>
+                    </li>
+                    <li>
+                        <strong>One-Tap Restore</strong>
+                        <span>Import a backup file to restore your fundraiser instantly</span>
+                    </li>
+                    <li>
+                        <strong>Downloads Folder</strong>
+                        <span>Files save directly to Downloads for easy access</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="feature-detail-visual">
+                <div class="visual-card backup-visual">
+                    <div class="backup-flow">
+                        <div class="backup-step">
+                            <span class="backup-icon">💾</span>
+                            <span class="backup-label">Export Backup</span>
+                        </div>
+                        <div class="backup-arrow">↓</div>
+                        <div class="backup-step">
+                            <span class="backup-icon">📁</span>
+                            <span class="backup-label">Downloads/</span>
+                            <span class="backup-file">fundraiser_backup.sfb</span>
+                        </div>
+                        <div class="backup-arrow">↓</div>
+                        <div class="backup-step">
+                            <span class="backup-icon">📲</span>
+                            <span class="backup-label">Share or Restore</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Additional Features Grid -->
+    <section class="more-features">
+        <div class="container">
+            <h2 class="section-title">And More...</h2>
+            <div class="more-features-grid">
+                <div class="more-feature">
+                    <span class="more-feature-icon">📴</span>
+                    <h4>100% Offline</h4>
+                    <p>No internet needed. Works in gyms, parking lots, anywhere.</p>
+                </div>
+                <div class="more-feature">
+                    <span class="more-feature-icon">📞</span>
+                    <h4>One-Tap Calling</h4>
+                    <p>Tap a phone number to call customers directly.</p>
+                </div>
+                <div class="more-feature">
+                    <span class="more-feature-icon">📋</span>
+                    <h4>Copy to Clipboard</h4>
+                    <p>Long-press any contact info to copy it quickly.</p>
+                </div>
+                <div class="more-feature">
+                    <span class="more-feature-icon">✏️</span>
+                    <h4>Edit Names</h4>
+                    <p>Fix typos or update customer names on the fly.</p>
+                </div>
+                <div class="more-feature">
+                    <span class="more-feature-icon">📷</span>
+                    <h4>Photo Gallery</h4>
+                    <p>Take reference photos for product identification.</p>
+                </div>
+                <div class="more-feature">
+                    <span class="more-feature-icon">📥</span>
+                    <h4>Easy Exports</h4>
+                    <p>CSV logs and backups save directly to Downloads.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Try Go Fundraise?</h2>
+            <p>Works offline on any phone or tablet. No internet or account required.</p>
+            <a href="index.html" class="btn btn-primary btn-large">Back to Home</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="app-logo.png" alt="Go Fundraise" class="logo-img">
+                    Go Fundraise
+                </div>
+                <p>Made with ❤️ for fundraiser organizers everywhere</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
