@@ -184,6 +184,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               onTap: () => _pickFile(ImportFormat.littleCaesars, ['pdf']),
             ),
 
+            const SizedBox(height: 16),
+
+            // 4. Square
+            _ImportOptionCard(
+              icon: Icons.point_of_sale,
+              title: 'Square',
+              subtitle: 'Import Square Online order export (CSV)',
+              onTap: () => _pickFile(ImportFormat.square, ['csv']),
+            ),
+
             const SizedBox(height: 24),
 
             // Divider with "or"
@@ -284,7 +294,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                         value: data.totalOrders.toString(),
                       ),
                       _StatItem(
-                        label: 'Total Boxes',
+                        label: 'Total Items',
                         value: data.totalBoxes.toString(),
                       ),
                     ],
@@ -320,7 +330,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                           .whereType<String>()
                           .join(' | '),
                     ),
-                    trailing: Text('${customer.totalBoxes} box'),
+                    trailing: Text('${customer.totalBoxes} ${customer.totalBoxes == 1 ? 'item' : 'items'}'),
                     onTap: () => _showCustomerOptions(index, data),
                   );
                 },

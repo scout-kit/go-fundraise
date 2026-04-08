@@ -648,8 +648,8 @@ class _ItemsListState extends ConsumerState<_ItemsList> {
                 const SizedBox(width: 8),
                 Text(
                   allChecked
-                      ? 'ALL ${widget.totalBoxes} BOXES VERIFIED'
-                      : '${widget.totalBoxes} BOXES',
+                      ? 'ALL ${widget.totalBoxes} ${widget.totalBoxes == 1 ? 'ITEM' : 'ITEMS'} VERIFIED'
+                      : '${widget.totalBoxes} ${widget.totalBoxes == 1 ? 'ITEM' : 'ITEMS'}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,

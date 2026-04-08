@@ -12,12 +12,14 @@ import 'package:go_fundraise/features/import/parsers/backup_parser.dart';
 import 'package:go_fundraise/features/import/parsers/csv_parser.dart';
 import 'package:go_fundraise/features/import/parsers/jd_sweid_parser.dart';
 import 'package:go_fundraise/features/import/parsers/little_caesars_parser.dart';
+import 'package:go_fundraise/features/import/parsers/square_parser.dart';
 
 /// Supported import formats
 enum ImportFormat {
   csv,
   jdSweid,
   littleCaesars,
+  square,
   backup,
 }
 
@@ -108,6 +110,10 @@ class ImportNotifier extends StateNotifier<ImportState> {
           break;
         case ImportFormat.littleCaesars:
           final parser = LittleCaesarsParser();
+          result = await parser.parseBytes(bytes, fileName);
+          break;
+        case ImportFormat.square:
+          final parser = SquareParser();
           result = await parser.parseBytes(bytes, fileName);
           break;
         case ImportFormat.backup:

@@ -249,7 +249,7 @@ class _MergeTargetPickerState extends State<MergeTargetPicker> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${customer.totalBoxes} box',
+                            '${customer.totalBoxes} ${customer.totalBoxes == 1 ? 'item' : 'items'}',
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
@@ -345,7 +345,7 @@ class MergeConfirmationDialog extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${source.totalBoxes} box',
+                      '${source.totalBoxes} ${source.totalBoxes == 1 ? 'item' : 'items'}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),
@@ -369,7 +369,7 @@ class MergeConfirmationDialog extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${target.totalBoxes} box',
+                      '${target.totalBoxes} ${target.totalBoxes == 1 ? 'item' : 'items'}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),
@@ -388,7 +388,7 @@ class MergeConfirmationDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                'Combined: $combinedBoxes boxes',
+                'Combined: $combinedBoxes ${combinedBoxes == 1 ? 'item' : 'items'}',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
