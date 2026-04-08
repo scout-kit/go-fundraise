@@ -192,7 +192,7 @@ class CustomerConsolidator {
       );
       parsedOrders.add(parsedOrder);
 
-      // Count items as boxes (simplified - could be more sophisticated)
+      // Count total items
       totalBoxes += order.items.fold(0, (sum, item) => sum + item.quantity);
     }
 
@@ -234,7 +234,7 @@ class CustomerConsolidator {
       originalEmails: emails.toList(),
       originalPhones: phones.toList(),
       orders: parsedOrders,
-      totalBoxes: totalBoxes > 0 ? totalBoxes : 1, // Minimum 1 box
+      totalBoxes: totalBoxes > 0 ? totalBoxes : 1, // Minimum 1 item
       warnings: warnings,
       needsReview: needsReview,
     );

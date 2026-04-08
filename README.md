@@ -148,6 +148,9 @@ lib/
 - Little Caesars fundraiser reports (auto-detected)
 - Standard fundraiser PDF formats with customer/order sections
 
+### Square
+- Square Online order CSV exports (multi-item orders grouped automatically)
+
 ### CSV
 Required columns (flexible naming):
 - Name (or First Name + Last Name)

@@ -71,7 +71,7 @@ class PhotoGalleryScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Take photos to help identify boxes and items',
+            'Take photos to help identify items',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.outline,
                 ),

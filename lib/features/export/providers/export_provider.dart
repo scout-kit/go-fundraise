@@ -70,7 +70,7 @@ class ExportNotifier extends StateNotifier<ExportState> {
       if (includeCustomerDetails) {
         headers.addAll(['Email', 'Phone']);
       }
-      headers.addAll(['Total Boxes', 'Status']);
+      headers.addAll(['Total Items', 'Status']);
       if (includeTimestamps) {
         headers.add('Pickup Time');
       }

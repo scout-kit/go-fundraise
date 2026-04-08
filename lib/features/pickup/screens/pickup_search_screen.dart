@@ -322,7 +322,7 @@ class _CustomerTile extends StatelessWidget {
                   ),
                 ),
 
-                // Box count
+                // Item count
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
