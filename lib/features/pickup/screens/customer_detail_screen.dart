@@ -12,6 +12,7 @@ import 'package:go_fundraise/core/database/database.dart';
 import 'package:go_fundraise/features/fundraiser/providers/fundraiser_provider.dart';
 import 'package:go_fundraise/features/import/parsers/parser_utils.dart';
 import 'package:go_fundraise/features/pickup/providers/pickup_provider.dart';
+import 'package:go_fundraise/features/pickup/widgets/add_items_sheet.dart';
 import 'package:go_fundraise/features/photo/providers/photo_provider.dart';
 import 'package:go_fundraise/shared/widgets/customer_dialogs.dart';
 
@@ -87,6 +88,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 child: ListTile(
                   leading: Icon(Icons.edit),
                   title: Text('Edit Name'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'add_items',
+                child: ListTile(
+                  leading: Icon(Icons.add_box_outlined),
+                  title: Text('Add Items...'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -276,12 +285,33 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       case 'edit_name':
         _editName(detail);
         break;
+      case 'add_items':
+        _addItems(detail);
+        break;
       case 'merge':
         _mergeCustomer(detail);
         break;
       case 'reset':
         _resetCustomer(detail);
         break;
+    }
+  }
+
+  Future<void> _addItems(CustomerDetail detail) async {
+    final added = await AddItemsSheet.show(
+      context,
+      customerId: detail.customer.id,
+      customerName: detail.customer.displayName,
+      fundraiserId: widget.fundraiserId,
+    );
+    if (added == true && mounted) {
+      ref.invalidate(customerDetailProvider(widget.customerId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Items added'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 

@@ -688,6 +688,29 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Find an existing fundraiser item by (productName, sku) or insert a new
+  /// one. Returns the id of the resolved row. The caller supplies [id] so
+  /// the database layer stays free of a uuid dependency.
+  Future<String> upsertFundraiserItem({
+    required String id,
+    required String fundraiserId,
+    required String productName,
+    String? sku,
+    required String createdAt,
+  }) async {
+    final existing =
+        await getFundraiserItemByProductKey(fundraiserId, productName, sku);
+    if (existing != null) return existing.id;
+    await insertFundraiserItem(FundraiserItemsCompanion.insert(
+      id: id,
+      fundraiserId: fundraiserId,
+      productName: productName,
+      sku: Value(sku),
+      createdAt: createdAt,
+    ));
+    return id;
+  }
+
   Future<bool> updateFundraiserItem(FundraiserItem item) =>
       update(fundraiserItems).replace(item);
 

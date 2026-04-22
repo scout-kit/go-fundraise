@@ -254,6 +254,72 @@ class PickupService {
   Future<void> resetCustomer(String customerId) async {
     await _db.resetCustomerToImport(customerId);
   }
+
+  /// Attach a manually-created order (with [items]) to a customer. Used for
+  /// rewards added at pickup (e.g., a "Thank You Crest"). New product names
+  /// auto-register as fundraiser items via upsert, so the same reward can
+  /// be picked from a list on the next customer. The order and each item
+  /// are marked source_kind='manual' so they're removed by a later
+  /// "Reset to Original". totalBoxes is recalculated at the end so the
+  /// customer card and progress counters stay in sync.
+  Future<void> addCustomOrder(
+    String customerId, {
+    required List<AddCustomItemInput> items,
+  }) async {
+    if (items.isEmpty) return;
+
+    final customer = await _db.getCustomerById(customerId);
+    if (customer == null) return;
+
+    final now = DateTime.now().toIso8601String();
+    final orderId = _uuid.v4();
+
+    await _db.insertOrder(OrdersCompanion.insert(
+      id: orderId,
+      customerId: customerId,
+      fundraiserId: customer.fundraiserId,
+      sourceKind: const Value('manual'),
+      createdAt: now,
+    ));
+
+    final companions = <OrderItemsCompanion>[];
+    for (var i = 0; i < items.length; i++) {
+      final input = items[i];
+      final fundraiserItemId = await _db.upsertFundraiserItem(
+        id: _uuid.v4(),
+        fundraiserId: customer.fundraiserId,
+        productName: input.productName,
+        sku: input.sku,
+        createdAt: now,
+      );
+      companions.add(OrderItemsCompanion.insert(
+        id: _uuid.v4(),
+        orderId: orderId,
+        fundraiserItemId: fundraiserItemId,
+        quantity: input.quantity,
+        sortOrder: Value(i),
+        sourceKind: const Value('manual'),
+      ));
+    }
+    await _db.insertOrderItems(companions);
+
+    await _db.recalculateCustomerTotalBoxes(customerId);
+  }
+}
+
+/// Input row for [PickupService.addCustomOrder]. Either references an
+/// existing fundraiser item (via productName+sku) or a brand-new one that
+/// will be registered on save.
+class AddCustomItemInput {
+  final String productName;
+  final String? sku;
+  final int quantity;
+
+  const AddCustomItemInput({
+    required this.productName,
+    this.sku,
+    required this.quantity,
+  });
 }
 
 /// Customer with pickup status
