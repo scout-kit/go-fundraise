@@ -29,6 +29,12 @@ class Customers extends Table {
   TextColumn get originalEmails => text()(); // JSON array
   TextColumn get originalPhones => text()(); // JSON array
   IntColumn get totalBoxes => integer().withDefault(const Constant(0))();
+  // Snapshot of contact fields captured at import time. Immutable after
+  // initial insert — compared against the current values to detect edits
+  // and restored verbatim by "Reset to original".
+  TextColumn get importedDisplayName => text().nullable()();
+  TextColumn get importedEmailNormalized => text().nullable()();
+  TextColumn get importedPhoneNormalized => text().nullable()();
   TextColumn get createdAt => text()();
 
   @override
@@ -47,6 +53,18 @@ class Orders extends Table {
   TextColumn get buyerPhone => text().nullable()(); // Buyer's phone number
   IntColumn get boxCount => integer().nullable()();
   TextColumn get rawText => text().nullable()(); // Original parsed block
+  // Provenance: whether this row was created by an import or added manually
+  // (e.g., a reward added at pickup). Immutable after insert.
+  TextColumn get sourceKind =>
+      text().withDefault(const Constant('imported'))();
+  // Snapshot of the editable order fields captured at import. Null on
+  // manually-created orders. Immutable after insert so "Reset to original"
+  // can restore divergent values.
+  TextColumn get importedBuyerName => text().nullable()();
+  TextColumn get importedBuyerPhone => text().nullable()();
+  TextColumn get importedOrderDate => text().nullable()();
+  TextColumn get importedPaymentStatus => text().nullable()();
+  TextColumn get importedSourceOrderId => text().nullable()();
   TextColumn get createdAt => text()();
 
   @override
@@ -76,6 +94,13 @@ class OrderItems extends Table {
   IntColumn get unitPriceCents => integer().nullable()();
   IntColumn get totalPriceCents => integer().nullable()();
   IntColumn get sortOrder => integer().nullable()();
+  // Provenance + import snapshot, mirroring the pattern on Orders so
+  // individual item-level edits (e.g., quantity adjusted at pickup) can be
+  // detected and reverted. Null snapshot columns on manually-added items.
+  TextColumn get sourceKind =>
+      text().withDefault(const Constant('imported'))();
+  IntColumn get importedQuantity => integer().nullable()();
+  TextColumn get importedFundraiserItemId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

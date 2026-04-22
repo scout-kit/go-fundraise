@@ -24,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -118,6 +118,70 @@ class AppDatabase extends _$AppDatabase {
           ''');
           await customStatement('''
             ALTER TABLE orders ADD COLUMN buyer_phone TEXT
+          ''');
+        }
+        if (from < 6) {
+          // Migration: Add provenance (source_kind) and import-snapshot
+          // columns so we can tell imported rows from manually-created ones
+          // and support "Reset to original" on a customer. All existing rows
+          // predate manual editing, so we backfill them as imported with
+          // current values as their snapshot.
+          await customStatement(
+            'ALTER TABLE customers ADD COLUMN imported_display_name TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE customers ADD COLUMN imported_email_normalized TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE customers ADD COLUMN imported_phone_normalized TEXT',
+          );
+          await customStatement('''
+            UPDATE customers
+            SET imported_display_name = display_name,
+                imported_email_normalized = email_normalized,
+                imported_phone_normalized = phone_normalized
+          ''');
+
+          await customStatement(
+            "ALTER TABLE orders ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'imported'",
+          );
+          await customStatement(
+            'ALTER TABLE orders ADD COLUMN imported_buyer_name TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE orders ADD COLUMN imported_buyer_phone TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE orders ADD COLUMN imported_order_date TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE orders ADD COLUMN imported_payment_status TEXT',
+          );
+          await customStatement(
+            'ALTER TABLE orders ADD COLUMN imported_source_order_id TEXT',
+          );
+          await customStatement('''
+            UPDATE orders
+            SET imported_buyer_name = buyer_name,
+                imported_buyer_phone = buyer_phone,
+                imported_order_date = order_date,
+                imported_payment_status = payment_status,
+                imported_source_order_id = original_order_id
+          ''');
+
+          await customStatement(
+            "ALTER TABLE order_items ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'imported'",
+          );
+          await customStatement(
+            'ALTER TABLE order_items ADD COLUMN imported_quantity INTEGER',
+          );
+          await customStatement(
+            'ALTER TABLE order_items ADD COLUMN imported_fundraiser_item_id TEXT',
+          );
+          await customStatement('''
+            UPDATE order_items
+            SET imported_quantity = quantity,
+                imported_fundraiser_item_id = fundraiser_item_id
           ''');
         }
       },
@@ -254,18 +318,16 @@ class AppDatabase extends _$AppDatabase {
       // Move orders from source to target
       await moveOrdersToCustomer(sourceId, targetId);
 
-      // Update target customer with merged data
-      final updatedTarget = Customer(
-        id: target.id,
-        fundraiserId: target.fundraiserId,
-        displayName: target.displayName,
-        emailNormalized: target.emailNormalized ?? source.emailNormalized,
-        phoneNormalized: target.phoneNormalized ?? source.phoneNormalized,
+      // Update target customer with merged data. copyWith preserves the
+      // target's imported_* snapshot fields so a later reset still restores
+      // the target to its original imported state.
+      final updatedTarget = target.copyWith(
+        emailNormalized: Value(target.emailNormalized ?? source.emailNormalized),
+        phoneNormalized: Value(target.phoneNormalized ?? source.phoneNormalized),
         originalNames: jsonEncode(mergedNames),
         originalEmails: jsonEncode(mergedEmails),
         originalPhones: jsonEncode(mergedPhones),
         totalBoxes: target.totalBoxes + source.totalBoxes,
-        createdAt: target.createdAt,
       );
       await updateCustomer(updatedTarget);
 
@@ -289,6 +351,15 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<bool> updateOrder(Order order) => update(orders).replace(order);
+
+  /// Delete an order and its order_items. The caller is responsible for
+  /// recalculating `customer.totalBoxes` after the delete settles.
+  Future<int> deleteOrder(String orderId) async {
+    await (delete(orderItems)..where((t) => t.orderId.equals(orderId))).go();
+    return (delete(orders)..where((t) => t.id.equals(orderId))).go();
+  }
+
   // Order item queries
   Future<List<OrderItem>> getOrderItemsByOrder(String orderId) =>
       (select(orderItems)
@@ -308,6 +379,9 @@ class AppDatabase extends _$AppDatabase {
         oi.unit_price_cents,
         oi.total_price_cents,
         oi.sort_order,
+        oi.source_kind,
+        oi.imported_quantity,
+        oi.imported_fundraiser_item_id,
         fi.product_name,
         fi.sku
       FROM order_items oi
@@ -328,6 +402,9 @@ class AppDatabase extends _$AppDatabase {
       sortOrder: row.read<int?>('sort_order'),
       productName: row.read<String>('product_name'),
       sku: row.read<String?>('sku'),
+      sourceKind: row.read<String>('source_kind'),
+      importedQuantity: row.read<int?>('imported_quantity'),
+      importedFundraiserItemId: row.read<String?>('imported_fundraiser_item_id'),
     )).toList();
   }
 
@@ -358,6 +435,121 @@ class AppDatabase extends _$AppDatabase {
   Future<void> insertOrderItems(List<OrderItemsCompanion> itemList) async {
     await batch((batch) {
       batch.insertAll(orderItems, itemList);
+    });
+  }
+
+  Future<bool> updateOrderItem(OrderItem item) =>
+      update(orderItems).replace(item);
+
+  Future<int> deleteOrderItem(String orderItemId) =>
+      (delete(orderItems)..where((t) => t.id.equals(orderItemId))).go();
+
+  /// Recompute and persist `customer.totalBoxes` by summing the quantities
+  /// of every order_item across the customer's orders. Call this after any
+  /// write that adds/removes/edits an order or order_item.
+  Future<void> recalculateCustomerTotalBoxes(String customerId) async {
+    final result = await customSelect(
+      '''
+      SELECT COALESCE(SUM(oi.quantity), 0) AS total
+      FROM order_items oi
+      INNER JOIN orders o ON oi.order_id = o.id
+      WHERE o.customer_id = ?
+      ''',
+      variables: [Variable.withString(customerId)],
+    ).getSingle();
+    final total = result.read<int>('total');
+    await (update(customers)..where((t) => t.id.equals(customerId)))
+        .write(CustomersCompanion(totalBoxes: Value(total)));
+  }
+
+  /// Revert a customer to their imported state:
+  ///  - delete every manually-added order (and its items)
+  ///  - delete every manually-added item on imported orders
+  ///  - restore imported orders' editable fields from their snapshot
+  ///  - restore imported items' quantity / fundraiser_item_id from snapshot
+  ///  - restore customer display name / email / phone from their snapshot
+  ///  - recompute totalBoxes
+  /// No-op on a customer that has never been imported (imported_* columns
+  /// are null because they were created manually).
+  Future<void> resetCustomerToImport(String customerId) async {
+    await transaction(() async {
+      // 1. Delete items on imported orders that were added manually.
+      await customStatement(
+        '''
+        DELETE FROM order_items
+        WHERE source_kind = 'manual'
+          AND order_id IN (
+            SELECT id FROM orders
+            WHERE customer_id = ? AND source_kind = 'imported'
+          )
+        ''',
+        [customerId],
+      );
+
+      // 2. Delete manually-created orders for this customer (and their items).
+      await customStatement(
+        '''
+        DELETE FROM order_items
+        WHERE order_id IN (
+          SELECT id FROM orders
+          WHERE customer_id = ? AND source_kind = 'manual'
+        )
+        ''',
+        [customerId],
+      );
+      await customStatement(
+        '''
+        DELETE FROM orders
+        WHERE customer_id = ? AND source_kind = 'manual'
+        ''',
+        [customerId],
+      );
+
+      // 3. Restore imported orders' editable fields from snapshots.
+      await customStatement(
+        '''
+        UPDATE orders
+        SET buyer_name = imported_buyer_name,
+            buyer_phone = imported_buyer_phone,
+            order_date = imported_order_date,
+            payment_status = imported_payment_status,
+            original_order_id = imported_source_order_id
+        WHERE customer_id = ? AND source_kind = 'imported'
+        ''',
+        [customerId],
+      );
+
+      // 4. Restore imported items' editable fields from snapshots.
+      await customStatement(
+        '''
+        UPDATE order_items
+        SET quantity = COALESCE(imported_quantity, quantity),
+            fundraiser_item_id = COALESCE(imported_fundraiser_item_id, fundraiser_item_id)
+        WHERE source_kind = 'imported'
+          AND order_id IN (
+            SELECT id FROM orders WHERE customer_id = ?
+          )
+        ''',
+        [customerId],
+      );
+
+      // 5. Restore customer contact snapshot, but only if one exists — a
+      // manually-created customer (no import) should not have its name
+      // wiped to null.
+      await customStatement(
+        '''
+        UPDATE customers
+        SET display_name = COALESCE(imported_display_name, display_name),
+            email_normalized = imported_email_normalized,
+            phone_normalized = imported_phone_normalized
+        WHERE id = ? AND imported_display_name IS NOT NULL
+        ''',
+        [customerId],
+      );
+
+      // 6. Recompute cached totalBoxes now that orders/items are back to
+      // their imported quantities.
+      await recalculateCustomerTotalBoxes(customerId);
     });
   }
 
@@ -609,6 +801,9 @@ class OrderItemWithProduct {
   final int? sortOrder;
   final String productName;
   final String? sku;
+  final String sourceKind;
+  final int? importedQuantity;
+  final String? importedFundraiserItemId;
 
   OrderItemWithProduct({
     required this.id,
@@ -620,11 +815,23 @@ class OrderItemWithProduct {
     this.sortOrder,
     required this.productName,
     this.sku,
+    this.sourceKind = 'imported',
+    this.importedQuantity,
+    this.importedFundraiserItemId,
   });
 
   /// Display name with SKU if available
   String get displayName =>
       sku != null && sku!.isNotEmpty ? '$productName ($sku)' : productName;
+
+  bool get isImported => sourceKind == 'imported';
+
+  bool get isEdited {
+    if (!isImported) return false;
+    return (importedQuantity != null && quantity != importedQuantity) ||
+        (importedFundraiserItemId != null &&
+            fundraiserItemId != importedFundraiserItemId);
+  }
 }
 
 /// Aggregated item across all orders in a fundraiser with verification status
@@ -713,4 +920,41 @@ extension CustomerExtension on Customer {
 
   /// Returns true if customer has more than one unique phone number
   bool get hasMultiplePhones => allPhones.length > 1;
+
+  /// True when the customer's name/email/phone match the imported snapshot.
+  /// Manually-created customers (no import snapshot) are treated as unedited.
+  bool get isContactEdited {
+    if (importedDisplayName == null) return false;
+    return displayName != importedDisplayName ||
+        emailNormalized != importedEmailNormalized ||
+        phoneNormalized != importedPhoneNormalized;
+  }
+}
+
+extension OrderExtension on Order {
+  bool get isImported => sourceKind == 'imported';
+
+  /// True when this imported order's editable fields have diverged from the
+  /// snapshot captured at import time. Always false for manual orders.
+  bool get isEdited {
+    if (!isImported) return false;
+    return buyerName != importedBuyerName ||
+        buyerPhone != importedBuyerPhone ||
+        orderDate != importedOrderDate ||
+        paymentStatus != importedPaymentStatus ||
+        originalOrderId != importedSourceOrderId;
+  }
+}
+
+extension OrderItemExtension on OrderItem {
+  bool get isImported => sourceKind == 'imported';
+
+  /// True when this imported item's quantity or linked product has diverged
+  /// from the snapshot captured at import time.
+  bool get isEdited {
+    if (!isImported) return false;
+    return (importedQuantity != null && quantity != importedQuantity) ||
+        (importedFundraiserItemId != null &&
+            fundraiserItemId != importedFundraiserItemId);
+  }
 }

@@ -234,18 +234,9 @@ class PickupService {
       originalNames.add(customer.displayName);
     }
 
-    // Create updated customer
-    final updated = Customer(
-      id: customer.id,
-      fundraiserId: customer.fundraiserId,
+    final updated = customer.copyWith(
       displayName: newName,
-      emailNormalized: customer.emailNormalized,
-      phoneNormalized: customer.phoneNormalized,
       originalNames: jsonEncode(originalNames),
-      originalEmails: customer.originalEmails,
-      originalPhones: customer.originalPhones,
-      totalBoxes: customer.totalBoxes,
-      createdAt: customer.createdAt,
     );
 
     await _db.updateCustomer(updated);
@@ -254,6 +245,14 @@ class PickupService {
   /// Merge source customer into target customer
   Future<void> mergeCustomers(String sourceId, String targetId) async {
     await _db.mergeCustomers(sourceId, targetId);
+  }
+
+  /// Revert every manual change for a customer: remove manually-added
+  /// orders/items, restore imported fields from their snapshot, and put
+  /// the customer's contact info back to its imported state. Pickup events
+  /// are left alone (they represent volunteer action, not source data).
+  Future<void> resetCustomer(String customerId) async {
+    await _db.resetCustomerToImport(customerId);
   }
 }
 

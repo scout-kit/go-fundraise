@@ -98,6 +98,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              const PopupMenuItem(
+                value: 'reset',
+                child: ListTile(
+                  leading: Icon(Icons.restore),
+                  title: Text('Reset to Original'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ],
           ),
         ],
@@ -271,6 +279,122 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       case 'merge':
         _mergeCustomer(detail);
         break;
+      case 'reset':
+        _resetCustomer(detail);
+        break;
+    }
+  }
+
+  Future<void> _resetCustomer(CustomerDetail detail) async {
+    // Count what'll actually change so the confirm dialog is concrete.
+    final manualOrderCount =
+        detail.orders.where((o) => !o.isImported).length;
+    final editedOrderCount =
+        detail.orders.where((o) => o.isImported && o.isEdited).length;
+    final manualItemCount = detail.items.where((i) {
+      final order = detail.orders.firstWhere(
+        (o) => o.id == i.orderId,
+        orElse: () => detail.orders.first,
+      );
+      return order.isImported && !i.isImported;
+    }).length;
+    final contactEdited = detail.customer.isContactEdited;
+
+    final nothingToReset = manualOrderCount == 0 &&
+        editedOrderCount == 0 &&
+        manualItemCount == 0 &&
+        !contactEdited;
+
+    if (nothingToReset) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nothing to reset — this customer matches the import.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final summary = <String>[];
+    if (manualOrderCount > 0) {
+      summary.add(
+        manualOrderCount == 1
+            ? '• 1 manually-added order will be removed'
+            : '• $manualOrderCount manually-added orders will be removed',
+      );
+    }
+    if (manualItemCount > 0) {
+      summary.add(
+        manualItemCount == 1
+            ? '• 1 manually-added item will be removed'
+            : '• $manualItemCount manually-added items will be removed',
+      );
+    }
+    if (editedOrderCount > 0) {
+      summary.add(
+        editedOrderCount == 1
+            ? '• 1 edited imported order will be restored'
+            : '• $editedOrderCount edited imported orders will be restored',
+      );
+    }
+    if (contactEdited) {
+      summary.add('• Contact info will be restored to the imported values');
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset to original?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Revert every manual change for ${detail.customer.displayName}:',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            for (final line in summary)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(line, style: Theme.of(context).textTheme.bodySmall),
+              ),
+            const SizedBox(height: 12),
+            Text(
+              'Pickup status is not affected.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final service = ref.read(pickupServiceProvider);
+    await service.resetCustomer(detail.customer.id);
+
+    ref.invalidate(customerDetailProvider(widget.customerId));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Customer reset to imported state'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -945,7 +1069,39 @@ class _OrderHistory extends StatelessWidget {
 
           return ListTile(
             leading: const Icon(Icons.receipt),
-            title: Text('Order #${order.originalOrderId ?? order.id.substring(0, 8)}'),
+            title: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'Order #${order.originalOrderId ?? order.id.substring(0, 8)}',
+                  ),
+                ),
+                if (order.isImported) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: order.isEdited
+                        ? 'Imported (edited)'
+                        : 'Imported from source file',
+                    child: Icon(
+                      Icons.download_for_offline_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  if (order.isEdited) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
             subtitle: subtitleText != null ? Text(subtitleText) : null,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,

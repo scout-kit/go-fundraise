@@ -244,17 +244,24 @@ class ImportNotifier extends StateNotifier<ImportState> {
       for (var i = 0; i < data.customers.length; i++) {
         final customerData = data.customers[i];
         final customerId = _uuid.v4();
+        final emailNormalized = customerData.email?.toLowerCase().trim();
+        final phoneNormalized = _normalizePhone(customerData.phone);
 
         customers.add(CustomersCompanion.insert(
           id: customerId,
           fundraiserId: fundraiserId,
           displayName: customerData.displayName,
-          emailNormalized: Value(customerData.email?.toLowerCase().trim()),
-          phoneNormalized: Value(_normalizePhone(customerData.phone)),
+          emailNormalized: Value(emailNormalized),
+          phoneNormalized: Value(phoneNormalized),
           originalNames: jsonEncode(customerData.originalNames),
           originalEmails: jsonEncode(customerData.originalEmails),
           originalPhones: jsonEncode(customerData.originalPhones),
           totalBoxes: Value(customerData.totalBoxes),
+          // Snapshot the values at import time so "Reset to original" can
+          // restore them verbatim after edits.
+          importedDisplayName: Value(customerData.displayName),
+          importedEmailNormalized: Value(emailNormalized),
+          importedPhoneNormalized: Value(phoneNormalized),
           createdAt: now,
         ));
 
@@ -273,6 +280,13 @@ class ImportNotifier extends StateNotifier<ImportState> {
             buyerPhone: Value(orderData.buyerPhone),
             boxCount: Value(orderData.boxCount),
             rawText: Value(orderData.rawText),
+            // source_kind defaults to 'imported'; snapshot editable fields
+            // so a later reset can restore them after manual edits.
+            importedBuyerName: Value(orderData.buyerName),
+            importedBuyerPhone: Value(orderData.buyerPhone),
+            importedOrderDate: Value(orderData.orderDate),
+            importedPaymentStatus: Value(orderData.paymentStatus),
+            importedSourceOrderId: Value(orderData.originalOrderId),
             createdAt: now,
           ));
 
@@ -290,6 +304,8 @@ class ImportNotifier extends StateNotifier<ImportState> {
               unitPriceCents: Value(itemData.unitPriceCents),
               totalPriceCents: Value(itemData.totalPriceCents),
               sortOrder: Value(j),
+              importedQuantity: Value(itemData.quantity),
+              importedFundraiserItemId: Value(fundraiserItemId),
             ));
           }
         }
@@ -473,7 +489,10 @@ class ImportNotifier extends StateNotifier<ImportState> {
 
       state = state.copyWith(progress: 0.3);
 
-      // Create customers with new IDs
+      // Create customers with new IDs. The backup format does not yet
+      // carry source_kind / imported_* columns, so restoration treats the
+      // backed-up values as the new imported baseline — a later reset will
+      // revert to these values.
       final customers = <CustomersCompanion>[];
       for (final customer in backup.customers) {
         final newId = _uuid.v4();
@@ -488,6 +507,9 @@ class ImportNotifier extends StateNotifier<ImportState> {
           originalEmails: customer.originalEmails,
           originalPhones: customer.originalPhones,
           totalBoxes: Value(customer.totalBoxes),
+          importedDisplayName: Value(customer.displayName),
+          importedEmailNormalized: Value(customer.emailNormalized),
+          importedPhoneNormalized: Value(customer.phoneNormalized),
           createdAt: now,
         ));
       }
@@ -514,6 +536,11 @@ class ImportNotifier extends StateNotifier<ImportState> {
           paymentStatus: Value(order.paymentStatus),
           buyerName: Value(order.buyerName),
           buyerPhone: Value(order.buyerPhone),
+          importedBuyerName: Value(order.buyerName),
+          importedBuyerPhone: Value(order.buyerPhone),
+          importedOrderDate: Value(order.orderDate),
+          importedPaymentStatus: Value(order.paymentStatus),
+          importedSourceOrderId: Value(order.orderId),
           createdAt: now,
         ));
 
@@ -529,6 +556,8 @@ class ImportNotifier extends StateNotifier<ImportState> {
             unitPriceCents: Value(item.unitPriceCents),
             totalPriceCents: Value(item.totalPriceCents),
             sortOrder: Value(item.sortOrder),
+            importedQuantity: Value(item.quantity),
+            importedFundraiserItemId: Value(newItemId),
           ));
         }
       }
