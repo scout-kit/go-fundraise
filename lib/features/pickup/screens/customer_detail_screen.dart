@@ -13,6 +13,7 @@ import 'package:go_fundraise/features/fundraiser/providers/fundraiser_provider.d
 import 'package:go_fundraise/features/import/parsers/parser_utils.dart';
 import 'package:go_fundraise/features/pickup/providers/pickup_provider.dart';
 import 'package:go_fundraise/features/pickup/widgets/add_items_sheet.dart';
+import 'package:go_fundraise/features/pickup/widgets/edit_order_sheet.dart';
 import 'package:go_fundraise/features/photo/providers/photo_provider.dart';
 import 'package:go_fundraise/shared/widgets/customer_dialogs.dart';
 
@@ -157,7 +158,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     ),
               ),
               const SizedBox(height: 8),
-              _OrderHistory(orders: detail.orders, items: detail.items),
+              _OrderHistory(
+                orders: detail.orders,
+                items: detail.items,
+                customerId: detail.customer.id,
+              ),
             ],
 
             const SizedBox(height: 100), // Space for FAB
@@ -1079,8 +1084,13 @@ class _PhotoDisplay extends ConsumerWidget {
 class _OrderHistory extends StatelessWidget {
   final List<Order> orders;
   final List<OrderItemWithProduct> items;
+  final String customerId;
 
-  const _OrderHistory({required this.orders, required this.items});
+  const _OrderHistory({
+    required this.orders,
+    required this.items,
+    required this.customerId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1200,6 +1210,21 @@ class _OrderHistory extends StatelessWidget {
                   ),
                   if (order.paymentStatus != null)
                     Chip(label: Text(order.paymentStatus!)),
+                  IconButton(
+                    tooltip: 'Edit order',
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      // Close the view sheet first so the edit sheet can
+                      // take its place without stacking bottom sheets.
+                      Navigator.pop(context);
+                      EditOrderSheet.show(
+                        context,
+                        order: order,
+                        items: orderItems,
+                        customerId: customerId,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

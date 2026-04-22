@@ -343,6 +343,9 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(t) => OrderingTerm.desc(t.orderDate)]))
           .get();
 
+  Future<Order?> getOrderById(String orderId) =>
+      (select(orders)..where((t) => t.id.equals(orderId))).getSingleOrNull();
+
   Future<int> insertOrder(OrdersCompanion order) => into(orders).insert(order);
 
   Future<void> insertOrders(List<OrdersCompanion> orderList) async {
@@ -428,6 +431,9 @@ class AppDatabase extends _$AppDatabase {
     }
     return allItems;
   }
+
+  Future<OrderItem?> getOrderItemById(String id) =>
+      (select(orderItems)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   Future<int> insertOrderItem(OrderItemsCompanion item) =>
       into(orderItems).insert(item);

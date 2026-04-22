@@ -255,6 +255,80 @@ class PickupService {
     await _db.resetCustomerToImport(customerId);
   }
 
+  /// Apply all edits to a single order in one transaction: updated
+  /// top-level fields, per-item quantity changes, removed items, and any
+  /// newly added items. Imported rows keep source_kind='imported' (and
+  /// their imported_* snapshot) so "Reset to Original" can still revert
+  /// the changes. totalBoxes is recomputed at the end.
+  ///
+  /// [updatedOrder] should be the result of
+  /// `currentOrder.copyWith(...)` — the caller controls what actually
+  /// changed. [quantityUpdates] maps order_item.id → new qty (must be > 0;
+  /// use [removedItemIds] for 0-qty removals). New items go through
+  /// upsertFundraiserItem, exactly like addCustomOrder.
+  Future<void> applyOrderEdits({
+    required Order updatedOrder,
+    required String customerId,
+    Map<String, int> quantityUpdates = const {},
+    Set<String> removedItemIds = const {},
+    List<AddCustomItemInput> addedItems = const [],
+  }) async {
+    await _db.transaction(() async {
+      await _db.updateOrder(updatedOrder);
+
+      for (final entry in quantityUpdates.entries) {
+        final item = await _db.getOrderItemById(entry.key);
+        if (item == null) continue;
+        await _db.updateOrderItem(item.copyWith(quantity: entry.value));
+      }
+
+      for (final id in removedItemIds) {
+        await _db.deleteOrderItem(id);
+      }
+
+      if (addedItems.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        final order = await _db.getOrderById(updatedOrder.id);
+        if (order != null) {
+          final companions = <OrderItemsCompanion>[];
+          for (var i = 0; i < addedItems.length; i++) {
+            final input = addedItems[i];
+            final fundraiserItemId = await _db.upsertFundraiserItem(
+              id: _uuid.v4(),
+              fundraiserId: order.fundraiserId,
+              productName: input.productName,
+              sku: input.sku,
+              createdAt: now,
+            );
+            companions.add(OrderItemsCompanion.insert(
+              id: _uuid.v4(),
+              orderId: order.id,
+              fundraiserItemId: fundraiserItemId,
+              quantity: input.quantity,
+              sortOrder: Value(i),
+              sourceKind: const Value('manual'),
+            ));
+          }
+          await _db.insertOrderItems(companions);
+        }
+      }
+    });
+
+    await _db.recalculateCustomerTotalBoxes(customerId);
+  }
+
+  /// Delete an order outright and recompute totalBoxes. Only safe for
+  /// manual orders — deleting an imported one puts the customer out of
+  /// sync with the import snapshot and "Reset to Original" won't bring
+  /// it back. The caller should gate this on `order.sourceKind == 'manual'`.
+  Future<void> deleteCustomerOrder({
+    required String orderId,
+    required String customerId,
+  }) async {
+    await _db.deleteOrder(orderId);
+    await _db.recalculateCustomerTotalBoxes(customerId);
+  }
+
   /// Attach a manually-created order (with [items]) to a customer. Used for
   /// rewards added at pickup (e.g., a "Thank You Crest"). New product names
   /// auto-register as fundraiser items via upsert, so the same reward can
