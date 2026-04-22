@@ -91,6 +91,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 ),
               ),
               const PopupMenuItem(
+                value: 'edit_contact',
+                child: ListTile(
+                  leading: Icon(Icons.contact_mail),
+                  title: Text('Edit Contact'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'merge',
                 child: ListTile(
                   leading: Icon(Icons.merge_type),
@@ -268,9 +276,43 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       case 'edit_name':
         _editName(detail);
         break;
+      case 'edit_contact':
+        _editContact(detail);
+        break;
       case 'merge':
         _mergeCustomer(detail);
         break;
+    }
+  }
+
+  Future<void> _editContact(CustomerDetail detail) async {
+    final result = await EditContactDialog.show(
+      context,
+      currentEmail: detail.customer.emailNormalized,
+      currentPhone: detail.customer.phoneNormalized,
+    );
+    if (result == null || !mounted) return;
+
+    final noChange = result.email == detail.customer.emailNormalized &&
+        result.phone == detail.customer.phoneNormalized;
+    if (noChange) return;
+
+    final service = ref.read(pickupServiceProvider);
+    await service.updateCustomerContact(
+      detail.customer.id,
+      email: result.email,
+      phone: result.phone,
+    );
+
+    ref.invalidate(customerDetailProvider(widget.customerId));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact updated'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 

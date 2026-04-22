@@ -68,6 +68,135 @@ class _EditNameDialogState extends State<EditNameDialog> {
   }
 }
 
+/// Result of [EditContactDialog]. Each field is either the new trimmed value
+/// or null when the user cleared that input.
+class EditContactResult {
+  final String? email;
+  final String? phone;
+  const EditContactResult({this.email, this.phone});
+}
+
+/// Dialog for editing a customer's primary email and phone. Normalization
+/// happens at the service boundary; this dialog only trims input.
+class EditContactDialog extends StatefulWidget {
+  final String? currentEmail;
+  final String? currentPhone;
+
+  const EditContactDialog({
+    super.key,
+    this.currentEmail,
+    this.currentPhone,
+  });
+
+  static Future<EditContactResult?> show(
+    BuildContext context, {
+    String? currentEmail,
+    String? currentPhone,
+  }) {
+    return showDialog<EditContactResult>(
+      context: context,
+      builder: (context) => EditContactDialog(
+        currentEmail: currentEmail,
+        currentPhone: currentPhone,
+      ),
+    );
+  }
+
+  @override
+  State<EditContactDialog> createState() => _EditContactDialogState();
+}
+
+class _EditContactDialogState extends State<EditContactDialog> {
+  late final TextEditingController _emailController;
+  late final TextEditingController _phoneController;
+  String? _emailError;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.currentEmail ?? '');
+    _phoneController = TextEditingController(text: widget.currentPhone ?? '');
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Contact'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _emailController,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email',
+              border: const OutlineInputBorder(),
+              errorText: _emailError,
+              hintText: 'jane@example.com',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Phone',
+              border: OutlineInputBorder(),
+              hintText: '(555) 123-4567',
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Leave a field blank to clear it.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    // Trivial shape check — a real RFC validator is overkill here; the
+    // service normalizes again on write.
+    if (email.isNotEmpty && !email.contains('@')) {
+      setState(() => _emailError = 'Missing @');
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      EditContactResult(
+        email: email.isEmpty ? null : email,
+        phone: phone.isEmpty ? null : phone,
+      ),
+    );
+  }
+}
+
 /// Data class for customer info displayed in merge picker
 class MergeCustomerInfo {
   final int index;

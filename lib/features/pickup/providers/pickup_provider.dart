@@ -255,6 +255,72 @@ class PickupService {
   Future<void> mergeCustomers(String sourceId, String targetId) async {
     await _db.mergeCustomers(sourceId, targetId);
   }
+
+  /// Update a customer's primary email and/or phone. Null values clear the
+  /// field. New values are appended to the `originalEmails` / `originalPhones`
+  /// JSON arrays so the contact history visible elsewhere in the app keeps
+  /// the old values (same pattern as renameCustomer).
+  ///
+  /// Phone inputs are normalized to 10 digits before storage; email is
+  /// lowercased and trimmed.
+  Future<void> updateCustomerContact(
+    String customerId, {
+    String? email,
+    String? phone,
+  }) async {
+    final customer = await _db.getCustomerById(customerId);
+    if (customer == null) return;
+
+    final normalizedEmail = _normalizeEmail(email);
+    final normalizedPhone = _normalizePhone(phone);
+
+    // Append to JSON arrays so the contact history (used by the merge
+    // picker and search) keeps the prior values.
+    final updatedEmails = _appendToJsonArray(
+      customer.originalEmails,
+      normalizedEmail,
+    );
+    final updatedPhones = _appendToJsonArray(
+      customer.originalPhones,
+      normalizedPhone,
+    );
+
+    final updated = customer.copyWith(
+      emailNormalized: Value(normalizedEmail),
+      phoneNormalized: Value(normalizedPhone),
+      originalEmails: updatedEmails,
+      originalPhones: updatedPhones,
+    );
+
+    await _db.updateCustomer(updated);
+  }
+
+  String? _normalizeEmail(String? email) {
+    if (email == null) return null;
+    final trimmed = email.trim().toLowerCase();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _normalizePhone(String? phone) {
+    if (phone == null) return null;
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) return null;
+    return digits.substring(digits.length - 10);
+  }
+
+  String _appendToJsonArray(String json, String? value) {
+    if (value == null || value.isEmpty) return json;
+    List<String> list;
+    try {
+      list = (jsonDecode(json) as List).cast<String>();
+    } catch (_) {
+      list = [];
+    }
+    if (!list.contains(value)) {
+      list.add(value);
+    }
+    return jsonEncode(list);
+  }
 }
 
 /// Customer with pickup status
