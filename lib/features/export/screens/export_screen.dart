@@ -119,7 +119,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 children: [
                   SwitchListTile(
                     title: const Text('Customer details'),
-                    subtitle: const Text('Name, email, phone'),
+                    subtitle: const Text('Email, phone, buyer contacts'),
                     value: _includeCustomerDetails,
                     onChanged: (v) => setState(() => _includeCustomerDetails = v),
                   ),

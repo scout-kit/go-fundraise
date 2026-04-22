@@ -68,7 +68,7 @@ class ExportNotifier extends StateNotifier<ExportState> {
       // Header row
       final headers = <String>['Name'];
       if (includeCustomerDetails) {
-        headers.addAll(['Email', 'Phone']);
+        headers.addAll(['Email', 'Phone', 'Buyer(s)']);
       }
       headers.addAll(['Total Items', 'Status']);
       if (includeTimestamps) {
@@ -78,48 +78,63 @@ class ExportNotifier extends StateNotifier<ExportState> {
         headers.add('Volunteer');
       }
       if (includeItemBreakdown) {
-        headers.add('Items');
+        headers.addAll(['Item', 'Qty']);
       }
       rows.add(headers);
 
-      // Data rows
+      // Data rows: one row per consolidated item when item breakdown is on,
+      // otherwise one row per customer. Customer-level fields repeat on every
+      // item row so spreadsheet sort/filter still works (Square-style).
       for (final customer in customers) {
         final pickup = pickupMap[customer.id];
         final isPickedUp = pickup?.status == 'picked_up';
 
-        final row = <dynamic>[customer.displayName];
-
+        String buyersCell = '';
         if (includeCustomerDetails) {
+          final orders = await _db.getOrdersByCustomer(customer.id);
+          buyersCell = _formatBuyers(orders);
+        }
+
+        List<dynamic> buildBaseRow() {
+          final row = <dynamic>[customer.displayName];
+          if (includeCustomerDetails) {
+            row.addAll([
+              customer.emailNormalized ?? '',
+              _formatPhone(customer.phoneNormalized),
+              buyersCell,
+            ]);
+          }
           row.addAll([
-            customer.emailNormalized ?? '',
-            _formatPhone(customer.phoneNormalized),
+            customer.totalBoxes,
+            isPickedUp ? 'Picked Up' : 'Remaining',
           ]);
-        }
-
-        row.addAll([
-          customer.totalBoxes,
-          isPickedUp ? 'Picked Up' : 'Remaining',
-        ]);
-
-        if (includeTimestamps) {
-          row.add(pickup?.pickedUpAt != null
-              ? _formatTimestamp(pickup!.pickedUpAt!)
-              : '');
-        }
-
-        if (includeVolunteerInitials) {
-          row.add(pickup?.volunteerInitials ?? '');
+          if (includeTimestamps) {
+            row.add(
+              pickup?.pickedUpAt != null
+                  ? _formatTimestamp(pickup!.pickedUpAt!)
+                  : '',
+            );
+          }
+          if (includeVolunteerInitials) {
+            row.add(pickup?.volunteerInitials ?? '');
+          }
+          return row;
         }
 
         if (includeItemBreakdown) {
-          final items = await _db.getOrderItemsWithProductByCustomer(customer.id);
-          final itemsStr = items
-              .map((i) => '${i.displayName} x${i.quantity}')
-              .join('; ');
-          row.add(itemsStr);
+          final items =
+              await _db.getOrderItemsWithProductByCustomer(customer.id);
+          final consolidated = _consolidateItems(items);
+          if (consolidated.isEmpty) {
+            rows.add(buildBaseRow()..addAll(['', '']));
+          } else {
+            for (final item in consolidated) {
+              rows.add(buildBaseRow()..addAll([item.displayName, item.quantity]));
+            }
+          }
+        } else {
+          rows.add(buildBaseRow());
         }
-
-        rows.add(row);
       }
 
       // Convert to CSV
@@ -164,6 +179,57 @@ class ExportNotifier extends StateNotifier<ExportState> {
       return '(${phone.substring(0, 3)}) ${phone.substring(3, 6)}-${phone.substring(6)}';
     }
     return phone;
+  }
+
+  /// Format the Buyer(s) cell from a customer's orders.
+  /// Each unique buyer appears once as "Name (XXX) XXX-XXXX", joined with "; ".
+  /// For formats like Little Caesars the customer has no phone of their own,
+  /// so this preserves the buyer contacts that only live on the order.
+  String _formatBuyers(List<Order> orders) {
+    final seen = <String>{};
+    final parts = <String>[];
+    for (final order in orders) {
+      final entry = _formatBuyerEntry(order.buyerName, order.buyerPhone);
+      if (entry.isEmpty || !seen.add(entry)) continue;
+      parts.add(entry);
+    }
+    return parts.join('; ');
+  }
+
+  String _formatBuyerEntry(String? name, String? phone) {
+    final trimmedName = name?.trim();
+    final formattedPhone = _formatPhone(phone);
+    final hasName = trimmedName != null && trimmedName.isNotEmpty;
+    final hasPhone = formattedPhone.isNotEmpty;
+    if (hasName && hasPhone) return '$trimmedName $formattedPhone';
+    if (hasName) return trimmedName;
+    return formattedPhone;
+  }
+
+  /// Merge items across a customer's orders by fundraiserItemId so the
+  /// exported rows match the in-app pickup checklist (a scout who bought 2
+  /// oranges in one order and 3 in another shows as "Oranges x5").
+  List<_ConsolidatedExportItem> _consolidateItems(
+    List<OrderItemWithProduct> items,
+  ) {
+    final map = <String, _ConsolidatedExportItem>{};
+    final order = <String>[];
+    for (final item in items) {
+      final existing = map[item.fundraiserItemId];
+      if (existing != null) {
+        map[item.fundraiserItemId] = _ConsolidatedExportItem(
+          displayName: existing.displayName,
+          quantity: existing.quantity + item.quantity,
+        );
+      } else {
+        map[item.fundraiserItemId] = _ConsolidatedExportItem(
+          displayName: item.displayName,
+          quantity: item.quantity,
+        );
+        order.add(item.fundraiserItemId);
+      }
+    }
+    return [for (final id in order) map[id]!];
   }
 
   String _formatTimestamp(String isoTimestamp) {
@@ -359,3 +425,12 @@ final exportProvider = StateNotifierProvider<ExportNotifier, ExportState>((ref) 
   final db = ref.watch(databaseProvider);
   return ExportNotifier(db);
 });
+
+class _ConsolidatedExportItem {
+  final String displayName;
+  final int quantity;
+  const _ConsolidatedExportItem({
+    required this.displayName,
+    required this.quantity,
+  });
+}
